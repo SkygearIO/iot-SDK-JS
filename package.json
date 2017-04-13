@@ -1,0 +1,36 @@
+{
+  "name": "skygear-iot",
+  "version": "0.0.1",
+  "description": "JS SDK for the Skygear IoT plugin",
+  "homepage": "https://github.com/SkygearIO/iot-SDK-JS#readme",
+  "keywords": [
+    "skygear",
+    "plugin",
+    "iot"
+  ],
+  "files": [
+    "lib/index.js"
+  ],
+  "main": "lib/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SkygearIO/iot-SDK-JS.git"
+  },
+  "author": "akiroz",
+  "license": "Apache-2.0",
+  "peerDependencies": {
+    "skygear": "^0.22.2"
+  },
+  "devDependencies": {
+    "esdoc": "^0.5.2",
+    "esdoc-node": "^1.0.1"
+  },
+  "scripts": {
+    "esdoc": "esdoc -c esdoc.json"
+  },
+  "esdoc": {
+    "source": "./lib",
+    "destination": "./doc",
+    "plugins": [{"name": "esdoc-node"}]
+  }
+}
