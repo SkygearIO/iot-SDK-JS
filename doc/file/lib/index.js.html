@@ -1,9 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../">
+  <title data-ice="title">lib/index.js | API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+  <script src="script/manual.js"></script>
+</head>
+<body class="layout-container" data-ice="rootContainer">
 
-const Console = require('console').Console;
-const Writable = require('stream').Writable;
-const crypto = require('crypto');
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  
+  <a data-ice="repoURL" href="https://github.com/SkygearIO/iot-SDK-JS" class="repo-url-github">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
 
-const {version:sdkVersion} = require('../package.json');
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/lib/index.js~SkygearIoT.html">SkygearIoT</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-index">index</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">lib/index.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">
+const Console = require(&apos;console&apos;).Console;
+const Writable = require(&apos;stream&apos;).Writable;
+const crypto = require(&apos;crypto&apos;);
+
+const {version:sdkVersion} = require(&apos;../package.json&apos;);
 
 class SkygearWritable extends Writable {
   constructor(skygear) {
@@ -12,10 +53,10 @@ class SkygearWritable extends Writable {
   }
   _write(chunk, encoding, callback) {
     this.skygear.lambda(
-      'iot:log', chunk.toString()
+      &apos;iot:log&apos;, chunk.toString()
     ).then(
-      _ => callback(),
-      e => callback(JSON.stringify(e,null,2))
+      _ =&gt; callback(),
+      e =&gt; callback(JSON.stringify(e,null,2))
     );
   }
 }
@@ -76,49 +117,49 @@ class SkygearIoT {
    */
   async initDevice(platform) {
     const skygear = this.skygear;
-    if(!skygear.currentUser) throw Error('[Skygear IoT] ERROR: login required before callng initialize');
+    if(!skygear.currentUser) throw Error(&apos;[Skygear IoT] ERROR: login required before callng initialize&apos;);
 
     const deviceID = skygear.currentUser.id;
 
     // generate pubsub channel hash
-    const deviceHash = crypto.createHash('sha256');
+    const deviceHash = crypto.createHash(&apos;sha256&apos;);
     deviceHash.update(platform.deviceSecret);
-    const pubsubChannel = `iot-${deviceHash.digest('hex')}`;
+    const pubsubChannel = `iot-${deviceHash.digest(&apos;hex&apos;)}`;
 
     // register device if nessessary
-    if(!skygear.currentUser.hasRole(new skygear.Role('iot-device'))) {
-      console.log('[Skygear IoT] user does not have role "iot-device", registering device with user...');
-      const deviceRecord = new skygear.Record('iot_device', {
+    if(!skygear.currentUser.hasRole(new skygear.Role(&apos;iot-device&apos;))) {
+      console.log(&apos;[Skygear IoT] user does not have role &quot;iot-device&quot;, registering device with user...&apos;);
+      const deviceRecord = new skygear.Record(&apos;iot_device&apos;, {
         _id:    `iot_device/${deviceID}`,
         secret: platform.deviceSecret,
         active: true,
       });
       deviceRecord.setAccess(new skygear.ACL([
-        {role: 'iot-manager', level: 'write'}
+        {role: &apos;iot-manager&apos;, level: &apos;write&apos;}
       ]));
       await skygear.publicDB.save(deviceRecord);
-      await skygear.lambda('iot:add-device-role', []);
+      await skygear.lambda(&apos;iot:add-device-role&apos;, []);
       await skygear.whoami();
-      console.log('OK!');
+      console.log(&apos;OK!&apos;);
     }
 
     // save login record
-    const loginRecord = new skygear.Record('iot_device_login', {
+    const loginRecord = new skygear.Record(&apos;iot_device_login&apos;, {
       deviceID: new skygear.Reference(`iot_device/${deviceID}`),
       sdkVersion,
       appVersion: platform.appVersion,
     });
     loginRecord.setAccess(new skygear.ACL([
-      {role: 'iot-manager', level: 'write'}
+      {role: &apos;iot-manager&apos;, level: &apos;write&apos;}
     ]));
     await skygear.publicDB.save(loginRecord);
 
     // register pubsub hooks
-    skygear.on('iot-request-status', _ => {
+    skygear.on(&apos;iot-request-status&apos;, _ =&gt; {
       this.reportStatus()
     });
-    skygear.on(pubsubChannel, ({action}) => {
-      if(!action) return console.error('[Skygear IoT] ERROR: missing key "action" in pubsub message'); 
+    skygear.on(pubsubChannel, ({action}) =&gt; {
+      if(!action) return console.error(&apos;[Skygear IoT] ERROR: missing key &quot;action&quot; in pubsub message&apos;); 
       const match = action.match(/^iot-(.+)$/);
       if(match) {
         if(platform.action.hasOwnProperty(match[1])) {
@@ -135,7 +176,7 @@ class SkygearIoT {
     this.device.loginID       = loginRecord._id
     this.device.pubsubChannel = pubsubChannel
 
-    console.log('[Skygear IoT] Device initialized.');
+    console.log(&apos;[Skygear IoT] Device initialized.&apos;);
   }
 
   /**
@@ -146,10 +187,10 @@ class SkygearIoT {
    * @return {Promise}
    */
   reportStatus(metadata = null) {
-    return this.skygear.lambda('iot:report-status', {
+    return this.skygear.lambda(&apos;iot:report-status&apos;, {
       deviceID: this.device.id,
       loginID:  this.device.loginID,
-      status:   'online',
+      status:   &apos;online&apos;,
       metadata,
     });
   }
@@ -164,10 +205,27 @@ class SkygearIoT {
  * @return {SkygearIoT} Skygear IoT container
  *
  * @example
- * const skygear = require('skygear');
+ * const skygear = require(&apos;skygear&apos;);
  * const skygearIoT = require(skygear-iot)(skygear);
  */
 module.exports = function(skygear) {
   return new SkygearIoT(skygear);
 }
 
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.5.2)</span><img src="./image/esdoc-logo-mini-black.png"></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>
