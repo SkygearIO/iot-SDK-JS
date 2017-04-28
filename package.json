@@ -1,6 +1,6 @@
 {
   "name": "skygear-iot",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "description": "JS SDK for the Skygear IoT plugin",
   "homepage": "https://github.com/SkygearIO/iot-SDK-JS#readme",
   "keywords": [

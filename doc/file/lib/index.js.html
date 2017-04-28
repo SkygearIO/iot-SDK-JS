@@ -129,12 +129,15 @@ class SkygearIoT {
     // register device if nessessary
     if(!skygear.currentUser.hasRole(new skygear.Role(&apos;iot-device&apos;))) {
       console.log(&apos;[Skygear IoT] user does not have role &quot;iot-device&quot;, registering device with user...&apos;);
-      const deviceRecord = new skygear.Record(&apos;iot_device&apos;, {
-        _id:    `iot_device/${deviceID}`,
-        secret: platform.deviceSecret,
-        active: true,
-      });
+      const deviceRecord = new skygear.Record(
+        &apos;iot_device&apos;, {
+          _id:    `iot_device/${deviceID}`,
+          secret: platform.deviceSecret,
+          active: true,
+        }
+      );
       deviceRecord.setAccess(new skygear.ACL([
+        {role: &apos;iot-device&apos;,  level: &apos;write&apos;},
         {role: &apos;iot-manager&apos;, level: &apos;write&apos;}
       ]));
       await skygear.publicDB.save(deviceRecord);
@@ -144,15 +147,26 @@ class SkygearIoT {
     }
 
     // save login record
-    const loginRecord = new skygear.Record(&apos;iot_device_login&apos;, {
-      deviceID: new skygear.Reference(`iot_device/${deviceID}`),
-      sdkVersion,
-      appVersion: platform.appVersion,
-    });
-    loginRecord.setAccess(new skygear.ACL([
+    const loginRecord = new skygear.Record(
+      &apos;iot_device_login&apos;, {
+        deviceID,
+        sdkVersion,
+        appVersion: platform.appVersion,
+      }
+    );
+    const deviceRecord = new skygear.Record(
+      &apos;iot_device&apos;, {
+        _id: `iot_device/${deviceID}`,
+        login: new skygear.Reference(loginRecord),
+      }
+    );
+    const acl = new skygear.ACL([
+      {role: &apos;iot-device&apos;,  level: &apos;write&apos;},
       {role: &apos;iot-manager&apos;, level: &apos;write&apos;}
-    ]));
-    await skygear.publicDB.save(loginRecord);
+    ]);
+    loginRecord.setAccess(acl);
+    deviceRecord.setAccess(acl);
+    await skygear.publicDB.save([loginRecord, deviceRecord]);
 
     // register pubsub hooks
     skygear.on(&apos;iot-request-status&apos;, _ =&gt; {
