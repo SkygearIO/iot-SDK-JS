@@ -222,7 +222,7 @@
         <p>
           
           
-          <span data-ice="name"><span><a href="class/lib/index.js~SkygearIoT.html#instance-method-reportStatus">reportStatus</a></span></span><span data-ice="signature">(metadata: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a></span>): <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">Promise</a></span></span>
+          <span data-ice="name"><span><a href="class/lib/index.js~SkygearIoT.html#instance-method-reportStatus">reportStatus</a></span></span><span data-ice="signature">(payloadOverride: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a></span>): <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">Promise</a></span></span>
         </p>
       </div>
       <div>
@@ -321,7 +321,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/lib/index.js.html#lineNumber59">source</a></span></span>
+      <span data-ice="source"><span><a href="file/lib/index.js.html#lineNumber58">source</a></span></span>
     </span>
   </h3>
 
@@ -365,7 +365,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/lib/index.js.html#lineNumber51">source</a></span></span>
+      <span data-ice="source"><span><a href="file/lib/index.js.html#lineNumber50">source</a></span></span>
     </span>
   </h3>
 
@@ -448,7 +448,7 @@
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/lib/index.js.html#lineNumber77">source</a></span></span>
+      <span data-ice="source"><span><a href="file/lib/index.js.html#lineNumber76">source</a></span></span>
     </span>
   </h3>
 
@@ -546,11 +546,11 @@ Register this device with the current user if not registered</p>
     
     
     
-    <span data-ice="name">reportStatus</span><span data-ice="signature">(metadata: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a></span>): <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">Promise</a></span></span>
+    <span data-ice="name">reportStatus</span><span data-ice="signature">(payloadOverride: <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a></span>): <span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">Promise</a></span></span>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/lib/index.js.html#lineNumber162">source</a></span></span>
+      <span data-ice="source"><span><a href="file/lib/index.js.html#lineNumber167">source</a></span></span>
     </span>
   </h3>
 
@@ -572,10 +572,24 @@ This function is called automatically as requested by the server.</p>
     <tbody>
     
     <tr data-ice="property" data-depth="0">
-      <td data-ice="name" data-depth="0">metadata</td>
+      <td data-ice="name" data-depth="0">payloadOverride</td>
       <td data-ice="type"><span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a></span></td>
       <td data-ice="appendix"><ul><li>optional</li></ul></td>
-      <td data-ice="description"><p>Metadata to be saved with the status record</p>
+      <td data-ice="description"><p>Override fields in the default payload</p>
+</td>
+    </tr>
+<tr data-ice="property" data-depth="1">
+      <td data-ice="name" data-depth="1">payloadOverride.status</td>
+      <td data-ice="type"><span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String">string</a></span></td>
+      <td data-ice="appendix"><ul><li>optional</li></ul></td>
+      <td data-ice="description"><p>Device status</p>
+</td>
+    </tr>
+<tr data-ice="property" data-depth="1">
+      <td data-ice="name" data-depth="1">payloadOverride.metadata</td>
+      <td data-ice="type"><span><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object">Object</a></span></td>
+      <td data-ice="appendix"><ul><li>optional</li></ul></td>
+      <td data-ice="description"><p>Additional status metadata</p>
 </td>
     </tr>
 </tbody>

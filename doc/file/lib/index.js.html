@@ -44,7 +44,7 @@ const Console = require(&apos;console&apos;).Console;
 const Writable = require(&apos;stream&apos;).Writable;
 const crypto = require(&apos;crypto&apos;);
 
-const {version:sdkVersion} = require(&apos;../package.json&apos;);
+const { version:sdkVersion } = require(&apos;../package.json&apos;);
 
 class SkygearWritable extends Writable {
   constructor(skygear) {
@@ -73,7 +73,6 @@ class SkygearIoT {
     this._device = {
       id: null,
       platform: null,
-      loginID: null,
       pubsubChannel: null,
     };
     this._console = new Console(
@@ -119,6 +118,15 @@ class SkygearIoT {
     const skygear = this.skygear;
     if(!skygear.currentUser) throw Error(&apos;[Skygear IoT] ERROR: login required before callng initialize&apos;);
 
+    const deviceRecordACL = new skygear.ACL([
+      { role: &apos;iot-device&apos;, level: &apos;write&apos; },
+      { role: &apos;iot-manager&apos;, level: &apos;write&apos; },
+    ]);
+    const deviceLoginRecordACL = new skygear.ACL([
+      { role: &apos;iot-device&apos;, level: &apos;write&apos; },
+      { role: &apos;iot-manager&apos;, level: &apos;read&apos; },
+    ]);
+
     const deviceID = skygear.currentUser.id;
 
     // generate pubsub channel hash
@@ -136,10 +144,7 @@ class SkygearIoT {
           active: true,
         }
       );
-      deviceRecord.setAccess(new skygear.ACL([
-        {role: &apos;iot-device&apos;,  level: &apos;write&apos;},
-        {role: &apos;iot-manager&apos;, level: &apos;write&apos;}
-      ]));
+      deviceRecord.setAccess(deviceRecordACL);
       await skygear.publicDB.save(deviceRecord);
       await skygear.lambda(&apos;iot:add-device-role&apos;, []);
       await skygear.whoami();
@@ -160,12 +165,8 @@ class SkygearIoT {
         login: new skygear.Reference(loginRecord),
       }
     );
-    const acl = new skygear.ACL([
-      {role: &apos;iot-device&apos;,  level: &apos;write&apos;},
-      {role: &apos;iot-manager&apos;, level: &apos;write&apos;}
-    ]);
-    loginRecord.setAccess(acl);
-    deviceRecord.setAccess(acl);
+    loginRecord.setAccess(deviceLoginRecordACL);
+    loginRecord.setAccess(deviceRecordACL);
     await skygear.publicDB.save([loginRecord, deviceRecord]);
 
     // register pubsub hooks
@@ -187,8 +188,10 @@ class SkygearIoT {
     // set SDK state
     this.device.id            = deviceID;
     this.device.platform      = platform;
-    this.device.loginID       = loginRecord._id
     this.device.pubsubChannel = pubsubChannel
+
+    // report status
+    await this.reportStatus();
 
     console.log(&apos;[Skygear IoT] Device initialized.&apos;);
   }
@@ -197,16 +200,23 @@ class SkygearIoT {
    * Reports device status to the skygear server.
    * This function is called automatically as requested by the server.
    *
-   * @param {Object} [metadata] Metadata to be saved with the status record
+   * @param {Object} [payloadOverride] Override fields in the default payload
+   * @param {string} [payloadOverride.status] Device status
+   * @param {Object} [payloadOverride.metadata] Additional status metadata
    * @return {Promise}
    */
-  reportStatus(metadata = null) {
-    return this.skygear.lambda(&apos;iot:report-status&apos;, {
-      deviceID: this.device.id,
-      loginID:  this.device.loginID,
-      status:   &apos;online&apos;,
-      metadata,
-    });
+  reportStatus(payloadOverride) {
+    return this.skygear.lambda(
+      &apos;iot:report-status&apos;,
+      Object.assign(
+        {
+          deviceID: this.device.id,
+          status:   &apos;online&apos;,
+          metadata: null,
+        },
+        payloadOverride
+      )
+    );
   }
 
 };

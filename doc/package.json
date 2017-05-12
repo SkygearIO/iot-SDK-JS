@@ -1,6 +1,6 @@
 {
   "name": "skygear-iot",
-  "version": "0.0.18",
+  "version": "0.0.21",
   "description": "JS SDK for the Skygear IoT plugin",
   "homepage": "https://github.com/SkygearIO/iot-SDK-JS#readme",
   "keywords": [
@@ -19,7 +19,7 @@
   "author": "akiroz",
   "license": "Apache-2.0",
   "peerDependencies": {
-    "skygear": "^0.22.2"
+    "skygear": "^0.23.0"
   },
   "devDependencies": {
     "esdoc": "^0.5.2",

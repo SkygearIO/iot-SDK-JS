@@ -3,7 +3,7 @@
     "__docId__": 0,
     "kind": "file",
     "name": "lib/index.js",
-    "content": "\nconst Console = require('console').Console;\nconst Writable = require('stream').Writable;\nconst crypto = require('crypto');\n\nconst {version:sdkVersion} = require('../package.json');\n\nclass SkygearWritable extends Writable {\n  constructor(skygear) {\n    super();\n    this.skygear = skygear;\n  }\n  _write(chunk, encoding, callback) {\n    this.skygear.lambda(\n      'iot:log', chunk.toString()\n    ).then(\n      _ => callback(),\n      e => callback(JSON.stringify(e,null,2))\n    );\n  }\n}\n\n/**\n * Skygear IoT container\n */\nclass SkygearIoT {\n  /**\n   * @param {SkygearContainer} skygear\n   */\n  constructor(skygear) {\n    this.skygear = skygear;\n    this._device = {\n      id: null,\n      platform: null,\n      loginID: null,\n      pubsubChannel: null,\n    };\n    this._console = new Console(\n      new SkygearWritable(skygear)\n    );\n  }\n\n  /**\n   * Device-specific data\n   * @type {Object}\n   * @property {string} device.id\n   * @property {Object} device.platform See `initialize` method.\n   * @property {string} device.loginID\n   * @property {string} device.pubsubChannel PubSub channel name for this device.\n   */\n  get device() {\n    return this._device;\n  }\n\n  /**\n   * A javascript console that outputs to the skygear server.\n   * @type {Console}\n   */\n  get console() {\n    return this._console;\n  }\n\n  /**\n   * Binds SDK with provided platform, setup event handlers.\n   * Register this device with the current user if not registered\n   *\n   * Note: This function must be called AFTER logging into skygear and you MUST ensure that the current user is not already registered with another device.\n   *\n   * @param {Object}          platform \n   * @param {Object}          platform.action           Object containing platform specific actions, all actions are optional.\n   * @param {async function}  platform.action.*\n   * @param {string}          platform.deviceSecret     A string that is unique to the hardware, could be SoC model + serial number.\n   * @param {string}          platform.appVersion       Version string of the user application.\n   *\n   * @return {Promise} Resolves on complete, reject on error.\n   */\n  async initDevice(platform) {\n    const skygear = this.skygear;\n    if(!skygear.currentUser) throw Error('[Skygear IoT] ERROR: login required before callng initialize');\n\n    const deviceID = skygear.currentUser.id;\n\n    // generate pubsub channel hash\n    const deviceHash = crypto.createHash('sha256');\n    deviceHash.update(platform.deviceSecret);\n    const pubsubChannel = `iot-${deviceHash.digest('hex')}`;\n\n    // register device if nessessary\n    if(!skygear.currentUser.hasRole(new skygear.Role('iot-device'))) {\n      console.log('[Skygear IoT] user does not have role \"iot-device\", registering device with user...');\n      const deviceRecord = new skygear.Record(\n        'iot_device', {\n          _id:    `iot_device/${deviceID}`,\n          secret: platform.deviceSecret,\n          active: true,\n        }\n      );\n      deviceRecord.setAccess(new skygear.ACL([\n        {role: 'iot-device',  level: 'write'},\n        {role: 'iot-manager', level: 'write'}\n      ]));\n      await skygear.publicDB.save(deviceRecord);\n      await skygear.lambda('iot:add-device-role', []);\n      await skygear.whoami();\n      console.log('OK!');\n    }\n\n    // save login record\n    const loginRecord = new skygear.Record(\n      'iot_device_login', {\n        deviceID,\n        sdkVersion,\n        appVersion: platform.appVersion,\n      }\n    );\n    const deviceRecord = new skygear.Record(\n      'iot_device', {\n        _id: `iot_device/${deviceID}`,\n        login: new skygear.Reference(loginRecord),\n      }\n    );\n    const acl = new skygear.ACL([\n      {role: 'iot-device',  level: 'write'},\n      {role: 'iot-manager', level: 'write'}\n    ]);\n    loginRecord.setAccess(acl);\n    deviceRecord.setAccess(acl);\n    await skygear.publicDB.save([loginRecord, deviceRecord]);\n\n    // register pubsub hooks\n    skygear.on('iot-request-status', _ => {\n      this.reportStatus()\n    });\n    skygear.on(pubsubChannel, ({action}) => {\n      if(!action) return console.error('[Skygear IoT] ERROR: missing key \"action\" in pubsub message'); \n      const match = action.match(/^iot-(.+)$/);\n      if(match) {\n        if(platform.action.hasOwnProperty(match[1])) {\n          platform.action[match[1]]();\n        } else {\n          console.warn(`[Skygear IoT] WARNING: Sever requested unsupported action: ${match[1]}`);\n        }\n      }\n    });\n\n    // set SDK state\n    this.device.id            = deviceID;\n    this.device.platform      = platform;\n    this.device.loginID       = loginRecord._id\n    this.device.pubsubChannel = pubsubChannel\n\n    console.log('[Skygear IoT] Device initialized.');\n  }\n\n  /**\n   * Reports device status to the skygear server.\n   * This function is called automatically as requested by the server.\n   *\n   * @param {Object} [metadata] Metadata to be saved with the status record\n   * @return {Promise}\n   */\n  reportStatus(metadata = null) {\n    return this.skygear.lambda('iot:report-status', {\n      deviceID: this.device.id,\n      loginID:  this.device.loginID,\n      status:   'online',\n      metadata,\n    });\n  }\n\n};\n\n\n/**\n * Return a new Skygear IoT container for the supplied Skygear container.\n *\n * @param {SkygearContainer} skygear Skygear container\n * @return {SkygearIoT} Skygear IoT container\n *\n * @example\n * const skygear = require('skygear');\n * const skygearIoT = require(skygear-iot)(skygear);\n */\nmodule.exports = function(skygear) {\n  return new SkygearIoT(skygear);\n}\n\n",
+    "content": "\nconst Console = require('console').Console;\nconst Writable = require('stream').Writable;\nconst crypto = require('crypto');\n\nconst { version:sdkVersion } = require('../package.json');\n\nclass SkygearWritable extends Writable {\n  constructor(skygear) {\n    super();\n    this.skygear = skygear;\n  }\n  _write(chunk, encoding, callback) {\n    this.skygear.lambda(\n      'iot:log', chunk.toString()\n    ).then(\n      _ => callback(),\n      e => callback(JSON.stringify(e,null,2))\n    );\n  }\n}\n\n/**\n * Skygear IoT container\n */\nclass SkygearIoT {\n  /**\n   * @param {SkygearContainer} skygear\n   */\n  constructor(skygear) {\n    this.skygear = skygear;\n    this._device = {\n      id: null,\n      platform: null,\n      pubsubChannel: null,\n    };\n    this._console = new Console(\n      new SkygearWritable(skygear)\n    );\n  }\n\n  /**\n   * Device-specific data\n   * @type {Object}\n   * @property {string} device.id\n   * @property {Object} device.platform See `initialize` method.\n   * @property {string} device.loginID\n   * @property {string} device.pubsubChannel PubSub channel name for this device.\n   */\n  get device() {\n    return this._device;\n  }\n\n  /**\n   * A javascript console that outputs to the skygear server.\n   * @type {Console}\n   */\n  get console() {\n    return this._console;\n  }\n\n  /**\n   * Binds SDK with provided platform, setup event handlers.\n   * Register this device with the current user if not registered\n   *\n   * Note: This function must be called AFTER logging into skygear and you MUST ensure that the current user is not already registered with another device.\n   *\n   * @param {Object}          platform \n   * @param {Object}          platform.action           Object containing platform specific actions, all actions are optional.\n   * @param {async function}  platform.action.*\n   * @param {string}          platform.deviceSecret     A string that is unique to the hardware, could be SoC model + serial number.\n   * @param {string}          platform.appVersion       Version string of the user application.\n   *\n   * @return {Promise} Resolves on complete, reject on error.\n   */\n  async initDevice(platform) {\n    const skygear = this.skygear;\n    if(!skygear.currentUser) throw Error('[Skygear IoT] ERROR: login required before callng initialize');\n\n    const deviceRecordACL = new skygear.ACL([\n      { role: 'iot-device', level: 'write' },\n      { role: 'iot-manager', level: 'write' },\n    ]);\n    const deviceLoginRecordACL = new skygear.ACL([\n      { role: 'iot-device', level: 'write' },\n      { role: 'iot-manager', level: 'read' },\n    ]);\n\n    const deviceID = skygear.currentUser.id;\n\n    // generate pubsub channel hash\n    const deviceHash = crypto.createHash('sha256');\n    deviceHash.update(platform.deviceSecret);\n    const pubsubChannel = `iot-${deviceHash.digest('hex')}`;\n\n    // register device if nessessary\n    if(!skygear.currentUser.hasRole(new skygear.Role('iot-device'))) {\n      console.log('[Skygear IoT] user does not have role \"iot-device\", registering device with user...');\n      const deviceRecord = new skygear.Record(\n        'iot_device', {\n          _id:    `iot_device/${deviceID}`,\n          secret: platform.deviceSecret,\n          active: true,\n        }\n      );\n      deviceRecord.setAccess(deviceRecordACL);\n      await skygear.publicDB.save(deviceRecord);\n      await skygear.lambda('iot:add-device-role', []);\n      await skygear.whoami();\n      console.log('OK!');\n    }\n\n    // save login record\n    const loginRecord = new skygear.Record(\n      'iot_device_login', {\n        deviceID,\n        sdkVersion,\n        appVersion: platform.appVersion,\n      }\n    );\n    const deviceRecord = new skygear.Record(\n      'iot_device', {\n        _id: `iot_device/${deviceID}`,\n        login: new skygear.Reference(loginRecord),\n      }\n    );\n    loginRecord.setAccess(deviceLoginRecordACL);\n    loginRecord.setAccess(deviceRecordACL);\n    await skygear.publicDB.save([loginRecord, deviceRecord]);\n\n    // register pubsub hooks\n    skygear.on('iot-request-status', _ => {\n      this.reportStatus()\n    });\n    skygear.on(pubsubChannel, ({action}) => {\n      if(!action) return console.error('[Skygear IoT] ERROR: missing key \"action\" in pubsub message'); \n      const match = action.match(/^iot-(.+)$/);\n      if(match) {\n        if(platform.action.hasOwnProperty(match[1])) {\n          platform.action[match[1]]();\n        } else {\n          console.warn(`[Skygear IoT] WARNING: Sever requested unsupported action: ${match[1]}`);\n        }\n      }\n    });\n\n    // set SDK state\n    this.device.id            = deviceID;\n    this.device.platform      = platform;\n    this.device.pubsubChannel = pubsubChannel\n\n    // report status\n    await this.reportStatus();\n\n    console.log('[Skygear IoT] Device initialized.');\n  }\n\n  /**\n   * Reports device status to the skygear server.\n   * This function is called automatically as requested by the server.\n   *\n   * @param {Object} [payloadOverride] Override fields in the default payload\n   * @param {string} [payloadOverride.status] Device status\n   * @param {Object} [payloadOverride.metadata] Additional status metadata\n   * @return {Promise}\n   */\n  reportStatus(payloadOverride) {\n    return this.skygear.lambda(\n      'iot:report-status',\n      Object.assign(\n        {\n          deviceID: this.device.id,\n          status:   'online',\n          metadata: null,\n        },\n        payloadOverride\n      )\n    );\n  }\n\n};\n\n\n/**\n * Return a new Skygear IoT container for the supplied Skygear container.\n *\n * @param {SkygearContainer} skygear Skygear container\n * @return {SkygearIoT} Skygear IoT container\n *\n * @example\n * const skygear = require('skygear');\n * const skygearIoT = require(skygear-iot)(skygear);\n */\nmodule.exports = function(skygear) {\n  return new SkygearIoT(skygear);\n}\n\n",
     "static": true,
     "longname": "lib/index.js",
     "access": null,
@@ -312,7 +312,7 @@
     ],
     "type": {
       "types": [
-        "{\"id\": *, \"platform\": *, \"loginID\": *, \"pubsubChannel\": *}"
+        "{\"id\": *, \"platform\": *, \"pubsubChannel\": *}"
       ]
     }
   },
@@ -325,7 +325,7 @@
     "longname": "lib/index.js~SkygearIoT#_console",
     "access": null,
     "description": null,
-    "lineNumber": 38,
+    "lineNumber": 37,
     "undocument": true,
     "unknown": [
       {
@@ -350,7 +350,7 @@
     "longname": "lib/index.js~SkygearIoT#device",
     "access": null,
     "description": "Device-specific data",
-    "lineNumber": 51,
+    "lineNumber": 50,
     "properties": [
       {
         "nullable": null,
@@ -413,7 +413,7 @@
     "longname": "lib/index.js~SkygearIoT#console",
     "access": null,
     "description": "A javascript console that outputs to the skygear server.",
-    "lineNumber": 59,
+    "lineNumber": 58,
     "type": {
       "nullable": null,
       "types": [
@@ -434,7 +434,7 @@
     "longname": "lib/index.js~SkygearIoT#initDevice",
     "access": null,
     "description": "Binds SDK with provided platform, setup event handlers.\nRegister this device with the current user if not registered\n\nNote: This function must be called AFTER logging into skygear and you MUST ensure that the current user is not already registered with another device.",
-    "lineNumber": 77,
+    "lineNumber": 76,
     "params": [
       {
         "nullable": null,
@@ -507,7 +507,7 @@
     "longname": "lib/index.js~SkygearIoT#reportStatus",
     "access": null,
     "description": "Reports device status to the skygear server.\nThis function is called automatically as requested by the server.",
-    "lineNumber": 162,
+    "lineNumber": 167,
     "params": [
       {
         "nullable": null,
@@ -516,8 +516,28 @@
         ],
         "spread": false,
         "optional": true,
-        "name": "metadata",
-        "description": "Metadata to be saved with the status record"
+        "name": "payloadOverride",
+        "description": "Override fields in the default payload"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": true,
+        "name": "payloadOverride.status",
+        "description": "Device status"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": true,
+        "name": "payloadOverride.metadata",
+        "description": "Additional status metadata"
       }
     ],
     "return": {
@@ -546,7 +566,7 @@
     "examples": [
       "const skygear = require('skygear');\nconst skygearIoT = require(skygear-iot)(skygear);"
     ],
-    "lineNumber": 184,
+    "lineNumber": 194,
     "params": [
       {
         "nullable": null,
