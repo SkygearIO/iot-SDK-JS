@@ -13,4 +13,4 @@ Requires NodeJS >= 7.6
 
 
 [skygear-iot]: https://github.com/SkygearIO/iot
-[api-doc]: https://rawgit.com/SkygearIO/iot-SDK-JS/master/doc/
+[api-doc]: https://cdn.jsdelivr.net/gh/SkygearIO/iot-SDK-JS@master/doc/
